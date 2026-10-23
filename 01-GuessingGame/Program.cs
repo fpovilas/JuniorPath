@@ -1,81 +1,138 @@
-﻿const int rangeStart = 1;
-const int rangeEnd = 100;
-int numberToGuess = GenerateNumber(rangeStart, rangeEnd, true);
-int numberOfTries = 0;
-bool continueGuessing = true;
+﻿const int MinNumber = 1;
+const int MaxNumber = 100;
 
-do
+StartGameLoop(MinNumber, MaxNumber);
+
+void StartGameLoop(int rangeStart, int rangeEnd)
 {
-    if (TryGetNumber(out int guessedNumber))
+    bool stopGame = false;
+    do
     {
-        numberOfTries++;
-        if (GuessNumber(guessedNumber, numberToGuess))
+        bool forcedExit = !StartGame(rangeStart, rangeEnd);
+
+        if (forcedExit)
+            stopGame = forcedExit;
+        else
+            stopGame = StopGame();
+
+    } while (!stopGame);
+}
+
+/// <summary>
+/// This method runs one game round.
+/// </summary>
+/// <returns>
+/// False if exit was forced e.g. input stream ended, True if game ended successfully
+/// </returns>
+bool StartGame(int rangeStart, int rangeEnd)
+{
+    int numberToGuess = GenerateNumber(rangeStart, rangeEnd);
+    int numberOfTries = 0;
+    bool continueGuessing = true;
+    bool correctlyGuessed = false;
+
+    do
+    {
+        if (TryGetNumber(rangeStart, rangeEnd, out int guessedNumber))
         {
-            continueGuessing = false;
+            if (GuessNumber(guessedNumber, numberToGuess))
+            {
+                continueGuessing = false;
+                correctlyGuessed = true;
+            }
+            else
+            {
+                Console.WriteLine(Hint(numberToGuess, guessedNumber));
+            }
+            numberOfTries++;
         }
         else
         {
-            Console.WriteLine(Hint(numberToGuess, guessedNumber));
+            continueGuessing = false;
         }
-    }
+    } while (continueGuessing);
 
-    if (!continueGuessing)
-    {
+    if (correctlyGuessed)
         Console.WriteLine($"Your guess was correct! Random number was {numberToGuess}. You guessed it in {numberOfTries} tries");
-        bool stopAsking = false;
-        do
-        {
-            Console.Write("Try Again? (Y/N):");
-            string answer = Console.ReadLine() ?? "";
-            if (answer.ToUpper().Equals("Y"))
-            {
-                stopAsking = true;
-                continueGuessing = true;
-                numberToGuess = GenerateNumber(rangeStart, rangeEnd, true);
-                numberOfTries = 0;
-            }
-            else if (answer.ToUpper().Equals("N"))
-            {
-                stopAsking = true;
-            }
-        } while (!stopAsking);
-    }
-} while (continueGuessing);
 
+    return correctlyGuessed;
+}
 
-int GenerateNumber(int start, int end, bool includeLastNum)
+int GenerateNumber(int start, int end)
 {
     Random number = new();
-    return number.Next(start, includeLastNum ? end + 1 : end);
+    return number.Next(start, end + 1);
 }
 
 bool GuessNumber(int guessedNumber, int correctNumber)
     => guessedNumber == correctNumber;
 
-bool TryGetNumber(out int number)
+bool TryGetNumber(int rangeStart, int rangeEnd, out int number)
 {
-    number = 0; // This is default value
-    Console.Write($"Guess number from {rangeStart} to {rangeEnd}: ");
-    if (!int.TryParse(Console.ReadLine(), out int guessedNumber))
+    number = 0;
+    bool parsedNumber = true;
+    do
     {
-        Console.WriteLine("You've entered not a number. Please try again.");
-        return false;
-    }
+        Console.Write($"Guess number from {rangeStart} to {rangeEnd}: ");
+        string? answer = Console.ReadLine();
 
-    Console.WriteLine($"Number {guessedNumber} accepted. Checking...");
-    number = guessedNumber;
+        if (answer is null)
+        {
+            parsedNumber = false;
+            break;
+        }
 
-    return true;
+        if (!int.TryParse(answer, out int guessedNumber))
+        {
+            Console.WriteLine("You've entered not a number. Please try again.");
+        }
+        else if (IsOutOfRange(guessedNumber, rangeStart, rangeEnd))
+        {
+            Console.WriteLine("Out of Range");
+        }
+        else
+        {
+            Console.WriteLine($"Number {guessedNumber} accepted. Checking...");
+            number = guessedNumber;
+            break;
+        }
+    } while (true);
+
+    return parsedNumber;
 }
 
 string Hint(int number, int guessedNumber)
 {
-    string answer = string.Empty;
     if (number > guessedNumber)
-        answer = "Higher";
+        return "Higher";
 
     if (number < guessedNumber)
-        answer = "Lower";
-    
-    return answer;
+        return "Lower";
+
+    return string.Empty;
+}
+
+bool IsOutOfRange(int guessedNumber, int rangeStart, int rangeEnd)
+    => (guessedNumber < rangeStart || guessedNumber > rangeEnd);
+
+bool StopGame()
+{
+    bool stopGame;
+    do
+    {
+        Console.Write("Try Again? (Y/N):");
+        string? answer = Console.ReadLine();
+        if (answer is null || answer.ToUpper().Equals("N"))
+        {
+            stopGame = true;
+            break;
+        }
+        else if (answer.ToUpper().Equals("Y"))
+        {
+            stopGame = false;
+            break;
+        }
+    } while (true);
+
+    return stopGame;
 }
