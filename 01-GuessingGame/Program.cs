@@ -25,6 +25,8 @@ namespace GuessingGame
 
             PrintGameRules();
 
+            WaitForKeyPress();
+
             // Choose Difficulty
             
             StartGameLoop(MinNumber, MaxNumber);
@@ -164,12 +166,12 @@ namespace GuessingGame
             return stopGame;
         }
 
-        private static (int? guessCount, int start, int end) GetDifficultyParameters(Difficulty difficulty)
+        private static DifficultyParameters GetDifficultyParameters(Difficulty difficulty)
             => difficulty switch
             {
-                Difficulty.Easy => (null, 1, 50),
-                Difficulty.Normal => (20, 1, 100),
-                Difficulty.Hard => (10, 1, 500),
+                Difficulty.Easy => new (null, 1, 50, ConsoleColor.Green),
+                Difficulty.Normal => new (20, 1, 100, ConsoleColor.Yellow),
+                Difficulty.Hard => new (10, 1, 500, ConsoleColor.Red),
                 _ => throw new UnreachableException($"Selected difficulty does not exist: {difficulty}")
             };
 
@@ -179,18 +181,6 @@ namespace GuessingGame
             foreach (Difficulty difficulty in Enum.GetValues<Difficulty>())
             {
                 WriteDifficultyRule(difficulty);
-            }
-
-            try
-            {
-                Console.WriteLine("\nPress any key to continue...");
-                Console.ReadKey(intercept: true);
-            }
-            catch (InvalidOperationException)
-            {
-                // No logging but here would be great to add log that
-                // something came from not console input.
-                return;
             }
         }
 
@@ -203,22 +193,21 @@ namespace GuessingGame
 
         private static void WriteDifficultyRule(Difficulty difficulty)
         {
-            (int? guessCount, int startRange, int endRange) diffParams = GetDifficultyParameters(difficulty);
-            string guessCount = (diffParams.guessCount is null ? "unlimited" : $"{diffParams.guessCount}");
+            DifficultyParameters diffParams = GetDifficultyParameters(difficulty);
+            string guessCount = (diffParams.GuessCount is null ? "unlimited" : $"{diffParams.GuessCount}");
             string difficultyName = difficulty.ToString();
-            ConsoleColor consoleColor = GetConsoleColorByDifficulty(difficulty);
 
-            WriteColorText(difficultyName, consoleColor);
-            Console.WriteLine($" - {guessCount} guesses, number from {diffParams.startRange} to {diffParams.endRange}");
+            WriteColorText(difficultyName, diffParams.Color);
+            Console.WriteLine($" - {guessCount} guesses, number from {diffParams.RangeStart} to {diffParams.RangeEnd}");
         }
 
-        private static ConsoleColor GetConsoleColorByDifficulty(Difficulty difficulty)
-            => difficulty switch
-            {
-                Difficulty.Easy => ConsoleColor.Green,
-                Difficulty.Normal => ConsoleColor.Yellow,
-                Difficulty.Hard => ConsoleColor.Red,
-                _ => throw new UnreachableException($"Selected difficulty does not exist: {difficulty}")
-            };
+        private static void WaitForKeyPress()
+        {
+            if (Console.IsInputRedirected)
+                return;
+
+            Console.WriteLine("\nPress any key to continue...");
+            Console.ReadKey(intercept: true);
+        }
     }
 }
